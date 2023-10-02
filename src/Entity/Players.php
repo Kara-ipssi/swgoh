@@ -2,23 +2,13 @@
 
 namespace App\Entity;
 
-use ApiPlatform\Metadata\ApiResource;
 use App\Repository\PlayersRepository;
 use Doctrine\ORM\Mapping as ORM;
-use ApiPlatform\Metadata\Get;
-use ApiPlatform\Metadata\Post;
-use ApiPlatform\Metadata\Put;
-use App\Controller\PlayersController;
 use Symfony\Bridge\Doctrine\Validator\Constraints\UniqueEntity;
 use ApiPlatform\Metadata\ApiProperty;
 
 
 #[ORM\Entity(repositoryClass: PlayersRepository::class)]
-#[ApiResource(operations: [
-    new Get(),
-    new Post(),
-    new Put(),
-])]
 #[UniqueEntity('allyCode')]
 class Players
 {
@@ -41,10 +31,10 @@ class Players
     #[ORM\Column]
     private ?int $totalGalacticPower = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?int $heroesGalacticPower = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: true)]
     private ?int $shipsGalacticPower = null;
 
     #[ORM\Column(length: 255)]
