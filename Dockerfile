@@ -16,13 +16,13 @@ RUN apt update && apt install -yqq nodejs npm
 
 COPY . /var/www
 
-COPY ./docker/apache.conf /etc/apache2/sites-available/000-default.conf
+COPY ./apache.conf /etc/apache2/sites-available/000-default.conf
 
 RUN cd /var/www && \
     composer install 
 
 WORKDIR /var/www/
 
-ENTRYPOINT ["bash", "./docker/docker.sh"]
+ENTRYPOINT ["bash", "./docker.sh"]
 
 EXPOSE 80

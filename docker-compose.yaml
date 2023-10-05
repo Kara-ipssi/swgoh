@@ -2,31 +2,44 @@ version: '3'
 
 services:
   database:
-    image: mysql:${MYSQL_VERSION:-8.0}
+    image: mysql:${MYSQL_VERSION:-8.0.34}
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-HK!VPzd&CeiHV7c}
       MYSQL_DATABASE: ${DB_NAME:-swgoh}
       MYSQL_USER: ${DB_USER:-Directed6112}
       MYSQL_PASSWORD: ${DB_USER_PASSWORD:-JD4@CoxvZyS7sTv}
-  
+    networks:
+      - swgoh-network
+    
   phpmyadmin:
     image: phpmyadmin/phpmyadmin
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: database
     ports:
       - ${PHPMYADMIN_PORT:-8080}:80
-    environment:
-      PMA_HOST: ${PMA_HOST:-database}
     depends_on:
       - database
+    networks:
+      - swgoh-network
 
   app:
-    image: 18ed4a1e2e99
-    # build:
-    #   context: ./docker
-    #   dockerfile: Dockerfile
+    container_name: swgoh
+    image: swgoh
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - ${APP_PORT:-8000}:80
     environment:
-      DATABASE_URL: mysql://swgoh_user:XtF5V#8ZaPnvuK!@database:3306/swgoh_db?serverVersion=8.0.34&charset=utf8mb4
+      DATABASE_URL: mysql://${DB_USER}:${DB_USER_PASSWORD}@database:3306/${DB_NAME}?serverVersion=8.0.34&charset=utf8mb4
+    depends_on:
+      - database
+    networks:
+      - swgoh-network
 
+networks:
+  swgoh-network:
+    driver: bridge
 
 # 8.0.34
