@@ -61,6 +61,9 @@ class Players
     #[ORM\Column(nullable: true)]
     private ?array $otherPlayersInGuild = null;
 
+    #[ORM\Column(length: 100, nullable: true)]
+    private ?string $title = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -234,5 +237,15 @@ class Players
         return $this;
     }
 
-    
+    public function getTitle(): ?string
+    {
+        return $this->title;
+    }
+
+    public function setTitle(?string $title): static
+    {
+        $this->title = $title;
+
+        return $this;
+    }
 }

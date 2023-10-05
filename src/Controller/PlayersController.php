@@ -5,7 +5,6 @@ namespace App\Controller;
 use App\Entity\Players;
 use App\Repository\PlayersRepository;
 use Doctrine\ORM\EntityManagerInterface;
-use http\Header;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -70,7 +69,6 @@ class PlayersController extends AbstractController
     public function savePlayerInDb(HttpClientInterface $client, EntityManagerInterface $entityManager, PlayersRepository $playersRepository, string $allyCode) : JsonResponse
     {
         try {
-
             $playerExist = $playersRepository->findOneBy([
                 "allyCode" => $allyCode
             ]);
@@ -100,7 +98,7 @@ class PlayersController extends AbstractController
                     "message" => "Player alrady exist.",
                     "data" => json_decode($this->json($playerExist)->getContent(), true)
                 ],
-                Response::HTTP_BAD_REQUEST
+                Response::HTTP_OK
             );
 
 
@@ -111,7 +109,6 @@ class PlayersController extends AbstractController
             );
         }
     }
-
 
     #[Route('/api/{allyCode}/update', name: 'updade_player_in_db', methods: 'PUT')]
     public function updatePlayerInDb(HttpClientInterface $client, EntityManagerInterface $entityManager, string $allyCode) : JsonResponse
@@ -136,10 +133,11 @@ class PlayersController extends AbstractController
                     Response::HTTP_NOT_FOUND
                 );
             }
-
+            //dd($player);
             $updatedPlayer = $this->createPlayerEntity($playerData, $guildData, $heroes, $ships, $allyCode);
 
             $player->setPseudo($updatedPlayer->getPseudo());
+            $player->setTitle($updatedPlayer->getTitle());
             $player->setLevel($updatedPlayer->getLevel());
             $player->setTotalGalacticPower($updatedPlayer->getTotalGalacticPower());
             $player->setHeroesGalacticPower($updatedPlayer->getHeroesGalacticPower());
@@ -168,20 +166,56 @@ class PlayersController extends AbstractController
         }
     }
 
+    #[Route("/api/allHeroesAndShips", name: "get_all_game_heroes", methods: 'GET')]
+    public function getAllGameHeroesAndShips(HttpClientInterface $client): JsonResponse
+    {
+        $url1 = "https://swgoh.gg/api/characters/";
+        $url2 = "https://swgoh.gg/api/ships/";
+        try {
+            $responseHeroes = json_decode($this->getApiData($client, $url1)->getContent(), true);
+            $responseShips = json_decode($this->getApiData($client, $url2)->getContent(), true);
+
+            return new JsonResponse([
+                    "heroes" => $responseHeroes['data'],
+                    "ships" => $responseShips['data'],
+                ],
+                Response::HTTP_OK
+            );
+        }catch (\Exception $e){
+            return new JsonResponse(
+                ["message" => $e->getMessage()],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+    }
+
+    private function getApiData(HttpClientInterface $client, string $url) : JsonResponse
+    {
+        $response = $client->request(
+            "GET", "$url"
+        );
+        $data = $response->toArray();
+        return new JsonResponse(
+            ["data" => json_decode($this->json($data)->getContent(), true)],
+            Response::HTTP_OK
+        );
+    }
+
     private function createPlayerEntity(array $playerData, array $guildData, array $heroes, array $ships, string $allyCode): Players
     {
         $player = new Players();
         $player->setPseudo($playerData["data"]["name"]);
+        $player->setTitle($playerData["data"]["title"]);
         $player->setLevel($playerData["data"]["level"]);
         $player->setAllyCode($allyCode);
         $player->setTotalGalacticPower($playerData["data"]["galactic_power"]);
         $player->setHeroesGalacticPower($playerData["data"]["character_galactic_power"]);
         $player->setShipsGalacticPower($playerData["data"]["ship_galactic_power"]);
-        $player->setGuildName($guildData["name"]);
+        $player->setGuildName($guildData["data"]["name"]);
         $player->setHeroes($heroes);
         $player->setShips($ships);
-        $player->setPlayerGuildMemberNb($guildData["member_count"]);
-        $player->setOtherPlayersInGuild($guildData["members"]);
+        $player->setPlayerGuildMemberNb($guildData["data"]["member_count"]);
+        $player->setOtherPlayersInGuild($guildData["data"]["members"]);
         $player->setUrl("https://swgoh.gg".$playerData["data"]["url"]);
         //$player->setCreatedAt(new \DateTimeImmutable());
         //$player->setUpdatedAt(new \DateTimeImmutable());
