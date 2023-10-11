@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Players;
 use App\Repository\PlayersRepository;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,17 +14,24 @@ use Symfony\Contracts\HttpClient\HttpClientInterface;
 
 class PlayersController extends AbstractController
 {
+
+    public function __construct(
+        private readonly LoggerInterface $logger,
+        private readonly HttpClientInterface $client,
+        private readonly EntityManagerInterface $entityManager,
+        private readonly PlayersRepository $playersRepository,
+    ) {}
     #[Route('/api/{allyCode}/guild', name: 'get_guild_by_allyCode')]
-    public function getGuildByAllyCode(HttpClientInterface $client, string $allyCode, bool $internal = false): JsonResponse
+    public function getGuildByAllyCode( string $allyCode, bool $internal = false): JsonResponse
     {
-        $response = $client->request(
+        $response = $this->client->request(
             "GET",
             "https://swgoh.gg/api/player/$allyCode/"
         );
         $playerData = $response->toArray();
         $guildId = $playerData['data']['guild_id'];
 
-        $guildResponse = $client->request(
+        $guildResponse = $this->client->request(
             "GET",
             "https://swgoh.gg/api/guild-profile/$guildId/"
         );
@@ -41,7 +49,7 @@ class PlayersController extends AbstractController
             $members = [];
             foreach ($guildData['data']['members'] as $member){
                 $memberData = [];
-                //$memberMoreData = $this->getPlayerAndGuildData($client, $member["ally_code"]);
+                //$memberMoreData = $this->getPlayerAndGuildData($member["ally_code"]);
                 $memberData["pseudo"] = $member["player_name"];
                 $memberData["ally_code"] = $member["ally_code"];
                 $memberData["galactic_power"] = $member["galactic_power"];
@@ -55,6 +63,7 @@ class PlayersController extends AbstractController
         }
 
         $jsonDataToReturn = json_decode($this->json($dataToReturn)->getContent(), true);
+        $this->logger->info($jsonDataToReturn["name"]);
         return new JsonResponse(
             [
                 "message" => "some data was found.",
@@ -66,14 +75,12 @@ class PlayersController extends AbstractController
 
 
     #[Route('/api/{allyCode}/create', name: 'save_player_in_db', methods: 'POST')]
-    public function savePlayerInDb(HttpClientInterface $client, EntityManagerInterface $entityManager, PlayersRepository $playersRepository, string $allyCode) : JsonResponse
+    public function savePlayerInDb(string $allyCode) : JsonResponse
     {
         try {
-            $playerExist = $playersRepository->findOneBy([
-                "allyCode" => $allyCode
-            ]);
+            $playerExist = $this->playersRepository->findOneByAllyCode($allyCode);
             if(!$playerExist){
-                $data = $this->getPlayerAndGuildData($client, $allyCode);
+                $data = $this->getPlayerAndGuildData($allyCode);
                 $playerData = $data['playerData'];
                 $guildData = $data['guildData'];
                 $heroes = $data['heroes'];
@@ -82,8 +89,8 @@ class PlayersController extends AbstractController
                 $player = $this->createPlayerEntity($playerData, $guildData, $heroes, $ships, $allyCode);
                 $player->setCreatedAt(new \DateTimeImmutable());
 
-                $entityManager->persist($player);
-                $entityManager->flush();
+                $this->entityManager->persist($player);
+                $this->entityManager->flush();
                 return new JsonResponse(
                     [
                         "message" => "Player was properly add to database.",
@@ -92,6 +99,7 @@ class PlayersController extends AbstractController
                     Response::HTTP_CREATED
                 );
             }
+            $this->logger->info($playerExist->getPseudo());
 
             return new JsonResponse(
                 [
@@ -111,21 +119,17 @@ class PlayersController extends AbstractController
     }
 
     #[Route('/api/{allyCode}/update', name: 'updade_player_in_db', methods: 'PUT')]
-    public function updatePlayerInDb(HttpClientInterface $client, EntityManagerInterface $entityManager, string $allyCode) : JsonResponse
+    public function updatePlayerInDb(string $allyCode) : JsonResponse
     {
         try {
-            $data = $this->getPlayerAndGuildData($client, $allyCode);
+            $data = $this->getPlayerAndGuildData($allyCode);
 
             $playerData = $data['playerData'];
             $guildData = $data['guildData'];
             $heroes = $data['heroes'];
             $ships = $data['ships'];
 
-            $repository = $entityManager->getRepository(Players::class);
-
-            $player = $repository->findOneBy([
-                "allyCode" => $allyCode
-            ]);
+            $player = $this->playersRepository->findOneByAllyCode($allyCode);
 
             if (!$player) {
                 return new JsonResponse(
@@ -149,7 +153,7 @@ class PlayersController extends AbstractController
             $player->setOtherPlayersInGuild($updatedPlayer->getOtherPlayersInGuild());
             $player->setUpdatedAt(new \DateTimeImmutable());
 
-            $entityManager->flush();
+            $this->entityManager->flush();
 
             return new JsonResponse(
                 [
@@ -167,13 +171,13 @@ class PlayersController extends AbstractController
     }
 
     #[Route("/api/allHeroesAndShips", name: "get_all_game_heroes", methods: 'GET')]
-    public function getAllGameHeroesAndShips(HttpClientInterface $client): JsonResponse
+    public function getAllGameHeroesAndShips(): JsonResponse
     {
         $url1 = "https://swgoh.gg/api/characters/";
         $url2 = "https://swgoh.gg/api/ships/";
         try {
-            $responseHeroes = json_decode($this->getApiData($client, $url1)->getContent(), true);
-            $responseShips = json_decode($this->getApiData($client, $url2)->getContent(), true);
+            $responseHeroes = json_decode($this->getApiData($url1)->getContent(), true);
+            $responseShips = json_decode($this->getApiData($url2)->getContent(), true);
 
             return new JsonResponse([
                     "heroes" => $responseHeroes['data'],
@@ -189,9 +193,9 @@ class PlayersController extends AbstractController
         }
     }
 
-    private function getApiData(HttpClientInterface $client, string $url) : JsonResponse
+    private function getApiData(string $url) : JsonResponse
     {
-        $response = $client->request(
+        $response = $this->client->request(
             "GET", "$url"
         );
         $data = $response->toArray();
@@ -223,15 +227,15 @@ class PlayersController extends AbstractController
         return $player;
     }
 
-    private function getPlayerAndGuildData(HttpClientInterface $client, string $allyCode): array
+    private function getPlayerAndGuildData(string $allyCode): array
     {
-        $response = $client->request(
+        $response = $this->client->request(
             "GET",
             "https://swgoh.gg/api/player/$allyCode/"
         );
 
         $playerData = $response->toArray();
-        $guildJsonData = $this->getGuildByAllyCode($client, $allyCode, true)->getContent();
+        $guildJsonData = $this->getGuildByAllyCode($allyCode, true)->getContent();
         $guildData = json_decode($guildJsonData, true);
 
         $heroes = [];
