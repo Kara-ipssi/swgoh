@@ -30,30 +30,31 @@ class UnitsServices
 
     public function saveAllUnit()
     {
-        $url1 = "https://swgoh.gg/api/characters/";
-        $url2 = "https://swgoh.gg/api/ships/";
-        
         try {
-            $responseHeroes = $this->globalServices->getApi($url1);
-            $responseShips = $this->globalServices->getApi($url2);
-            $unitList = array_merge($responseHeroes, $responseShips);
-            $units = [];
-            foreach ($unitList as $unitItem) {
-                $unit = $this->createUnitEntity($unitItem);
-                $this->entityManager->persist($unit);
-            }
-
-            foreach ($units as $unit) {
-                $this->entityManager->persist($unit);
-            }
-            $this->entityManager->flush();
-
-            $units = $this->entityManager->getRepository(Units::class)->findAll();
-
-            return $units;
+            $units = $this->fetchUnitsFromAPI();
+            $this->saveUnitsToDatabase($units);
+            return $this->entityManager->getRepository(Units::class)->findAll();
         }catch (\Exception $e){
             return $this->globalServices->prepareErrorJsonResponse($e->getMessage());
         }
+    }
+
+    private function fetchUnitsFromAPI() : array
+    {
+        $url1 = "https://swgoh.gg/api/characters/";
+        $url2 = "https://swgoh.gg/api/ships/";
+        $responseHeroes = $this->globalServices->getApi($url1);
+        $responseShips = $this->globalServices->getApi($url2);
+        return array_merge($responseHeroes, $responseShips);
+    }
+
+    private function saveUnitsToDatabase(array $unitList)
+    {
+        foreach ($unitList as $unitItem) {
+            $unit = $this->createUnitEntity($unitItem);
+            $this->entityManager->persist($unit);
+        }
+        $this->entityManager->flush();
     }
 
     public function saveOneUnit(array $unit) : Units | JsonResponse

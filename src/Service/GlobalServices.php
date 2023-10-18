@@ -27,12 +27,6 @@ class GlobalServices
         return $this->client;
     }
 
-    /**
-     * Get fonction 
-     *
-     * @param string $url url to fetch
-     * @return JsonResponse 
-     */
     public function getApi(string $url) : array
     {
         $response = $this->client->request("GET", $url);
@@ -53,11 +47,6 @@ class GlobalServices
     public function serializeData(mixed $dataToSerialize, array $groups = []): string
     {
         return $this->serializer->serialize($dataToSerialize, 'json', $groups);
-    }
-
-    public function deserializeData(string $dataToDeserialize, string $type, array $groups = []): mixed
-    {
-        return $this->serializer->deserialize($dataToDeserialize, $type, 'json', $groups);
     }
 
 }
