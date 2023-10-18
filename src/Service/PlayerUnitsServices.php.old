@@ -1,0 +1,76 @@
+<?php
+
+// namespace App\Service;
+
+// use App\Entity\Players;
+// use App\Entity\PlayerUnits;
+// use App\Entity\Units;
+// use Psr\Log\LoggerInterface;
+// use Doctrine\ORM\EntityManagerInterface;
+// use Symfony\Component\HttpFoundation\JsonResponse;
+// use App\Service\GlobalServices;
+
+// class PlayerUnitsServices
+// {
+//     public function __construct(
+//         private readonly EntityManagerInterface $entityManager,
+//         private readonly LoggerInterface $logger,
+//         private readonly GlobalServices $globalServices,
+//     )
+//     {}
+
+//     public function getPlayerUnits(Players $player, Units $unit, array $unitMoreData) : PlayerUnits | JsonResponse 
+//     {
+//         try {
+//             $playerUnit = $unit->getPlayerUnits();
+//             if(!$playerUnit){
+//                 $playerUnit = $this->savePlayerUnits($$player, $unit, $unitMoreData);
+//             }
+//             return $playerUnit;
+//         } catch (\Throwable $e) {
+//             return $this->globalServices->prepareErrorJsonResponse($e->getMessage());
+//         }
+//     }
+
+//     public function savePlayerUnits(Players $player, Units $unit, array $unitMoreData) : PlayerUnits | JsonResponse
+//     {
+//         try {
+//             $playerUnits = new PlayerUnits();
+//             $playerUnits->setPlayer($player);
+//             $playerUnits->setUnit($unit);
+//             $playerUnits->setName($unit->getName());
+//             $playerUnits->setHealth($unitMoreData['health']);
+//             $playerUnits->setSpeed($unitMoreData['speed']);
+//             $playerUnits->setCriticalDamage($unitMoreData['critical_damage']);
+//             $playerUnits->setTenacity($unitMoreData['tenacity']);
+//             $playerUnits->setPhysicalCriticalChance($unitMoreData['physical_critical_chance']);
+//             $playerUnits->setSpecialDamage($unitMoreData['special_damage']);
+//             $playerUnits->setSpecialCriticalChance($unitMoreData['special_critical_chance']);
+//             $playerUnits->setPower($unitMoreData['power']);
+//             if($unit->getCombatType() == 1){
+//                 $playerUnits->setPhydicalDamage($unitMoreData['phydical_damage']);
+//                 $playerUnits->setHealthSteal($unitMoreData['health_steal']);
+//             }
+//             $this->entityManager->persist($playerUnits);
+//             $this->entityManager->flush();
+
+//             return $playerUnits;
+            
+//         } catch (\Throwable $e) {
+//             return $this->globalServices->prepareErrorJsonResponse($e->getMessage());
+//         }
+//     }
+    
+//     public function getPlayerUnits(string $allyCode) : array | JsonResponse 
+//     {
+//         try {
+//             $playerUnits = $this->entityManager->getRepository(PlayerUnits::class)->findByAllyCode($allyCode);
+//             if(!$playerUnits){
+//                 $playerUnits = $this->savePlayerUnits($allyCode);
+//             }
+//             return $playerUnits;
+//         } catch (\Throwable $e) {
+//             return $this->globalServices->prepareErrorJsonResponse($e->getMessage());
+//         }
+//     }
+// }
